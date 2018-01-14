@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+var fs = require('fs');
+var albumName = 'Album_' + (new Date).getTime();
 var scribble = require('scribbletune')
 var midiFromTracks = require('./midiFromTracks')
 const chromaticNotes = ['c', 'c#', 'd', 'd#', 'e', 'f', 'f#', 'g', 'g#', 'a', 'a#', 'b']
@@ -106,8 +108,11 @@ var randRange = function (low, high) {
 
 var makeSongs = function (numberOfSongs) {
   for (var i = 0; i < numberOfSongs; i++) {
-    midiFromTracks(buildMultiTrack(randRange(2, 8)), randRange(60, 135), 'Song' + (i + 1) + '.mid')
+    midiFromTracks(buildMultiTrack(randRange(2, 8)), randRange(60, 135), albumName + '/Song' + (i + 1) + '.mid')
   }
 }
 
-makeSongs(randRange(12, 20))
+if (!fs.existsSync(albumName)) {
+  fs.mkdirSync(albumName);
+  makeSongs(randRange(12, 20));
+}
