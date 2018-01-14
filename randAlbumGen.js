@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 var fs = require('fs');
-var albumName = 'Album_' + (new Date).getTime();
 var scribble = require('scribbletune')
 var midiFromTracks = require('./midiFromTracks')
 const chromaticNotes = ['c', 'c#', 'd', 'd#', 'e', 'f', 'f#', 'g', 'g#', 'a', 'a#', 'b']
@@ -15,11 +14,21 @@ var randomScale = function () {
   return scales[Math.floor(Math.random() * scales.length)]
 }
 
-const KEY = randomKey()
-const SCALE = randomScale()
 
-var randomBar = function () {
-  var notes = scribble.scale(KEY, SCALE)
+var albumName = 'Album_' + (new Date).getTime();
+// Config stuff
+var info = function () {
+  return {
+    tempo: randRange(25, 50),
+    key: randomKey(),
+    scale: randomScale()
+  }
+}
+// End Config
+
+
+var randomBar = function (key, scale) {
+  var notes = scribble.scale(key, scale)
   var bar = []
   for (var i = 0; i < 4; i++) {
     bar.push(notes[Math.floor(Math.random() * notes.length)])
@@ -36,7 +45,7 @@ var randomPattern = function () {
   return patt.toString().replace(/,/g, '')
 }
 
-var randomClip = function () {
+var randomClip = function (info) {
   var yn = Math.floor(Math.random() * 2)
   var shuf = false
   var sizzle = false
@@ -47,7 +56,7 @@ var randomClip = function () {
   }
 
   return scribble.clip({
-    notes: randomBar(),
+    notes: randomBar(info['key'], info['scale']),
     pattern: randomPattern().repeat(4),
     shuffle: shuf,
     sizzle: sizzle
@@ -72,18 +81,18 @@ var mergeClips = function (clips) {
   return newClip
 }
 
-var createPattern = function () {
+var createPattern = function (info) {
   var clips = []
   for (var i = 0; i < 4; i++) {
-    clips.push(randomClip())
+    clips.push(randomClip(info))
   }
   return mergeClips(clips)
 }
 
-var buildTrack = function (chan, inst) {
-  var partA = extendClip(createPattern(), 4)
-  var partB = extendClip(createPattern(), 2)
-  var partC = extendClip(createPattern(), 4)
+var buildTrack = function (chan, inst, info) {
+  var partA = extendClip(createPattern(info), 4)
+  var partB = extendClip(createPattern(info), 2)
+  var partC = extendClip(createPattern(info), 4)
 
   var track = mergeClips([partA, partB, partC])
   track.push({channel: chan, instrument: inst})
@@ -94,21 +103,23 @@ var randInst = function () {
   return Math.floor(Math.random() * 127)
 }
 
-var buildMultiTrack = function (numberOfTracks) {
+var buildMultiTrack = function (numberOfTracks, info) {
   var tracks = []
   for (var i = 0; i < numberOfTracks; i++) {
-    tracks.push(buildTrack(i, randInst()))
+    tracks.push(buildTrack(i, randInst(), info))
   }
   return tracks
 }
 
-var randRange = function (low, high) {
+function randRange(low, high) {
   return Math.floor(Math.random() * (high - low)) + low
 }
 
 var makeSongs = function (numberOfSongs) {
   for (var i = 0; i < numberOfSongs; i++) {
-    midiFromTracks(buildMultiTrack(randRange(2, 8)), randRange(60, 135), albumName + '/Song' + (i + 1) + '.mid')
+    var songInfo = info()
+    console.log(songInfo)
+    midiFromTracks(buildMultiTrack(randRange(2, 8), songInfo), songInfo['tempo'], albumName + '/Song' + (i + 1) + '_' + songInfo['key'] +'_'+ songInfo['scale'].replace(/ /g, "_") +'_'+ songInfo['tempo'] + '.mid')
   }
 }
 
